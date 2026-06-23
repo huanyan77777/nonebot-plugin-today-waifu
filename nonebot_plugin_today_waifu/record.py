@@ -20,6 +20,14 @@ TODAY_WAIFU_GROUP_MEMBER_CACHE: bool = plugin_config.today_waifu_group_member_ca
 RANDOM = "random"
 ACTIVE = "active"
 
+SPECIAL_WAIFU_ID = "242003347"
+
+# 特殊文案填写位置：修改下面这些常量即可自定义抽到 SPECIAL_WAIFU_ID 时的回复文本。
+SPECIAL_TEXT_CHANGE_LAST = "\n为什么一直换老婆……有人会伤心的……\n你今天的群友老婆是桓衍喔~"
+SPECIAL_TEXT_CHANGE_NORMAL = "\n你今天的群友老婆是桓衍哦~\n如果你这个坏蛋敢抛弃她的话，你就看不到明天了喔"
+SPECIAL_TEXT_ALREADY_HAS = "\n你今天已经有老婆了，是桓衍哦，不可以再有别人了呢~"
+SPECIAL_TEXT_FIRST_DRAW = "\n你今天的群友老婆是桓衍哦~"
+
 
 class SceneMemberRecord(BaseModel):
     members: Set[str] = Field(default_factory=set)
@@ -241,12 +249,12 @@ class SceneRecord(BaseModel):
             return await construct_message(session, interface, "\n请专一的对待自己的老婆哦")
         # 今天没抽老婆直接换老婆的情况
         if user.id not in self.waifu_record:
-            return await construct_message(session, interface, "\n换老婆前请先娶个老婆哦，渣男")
+            return await construct_message(session, interface, "\n你还没有老婆喔，记得先找一位喔")
         # 超出换老婆次数/机器人是老婆还换老婆的情况
         if (self.waifu_change_record.get(user.id, 0) > self.limit_times
                 or self.waifu_record.get(user.id) == session.self_id):
             self.waifu_change_record[user.id] = self.waifu_change_record.get(user.id, 0) + 1
-            return await construct_message(session, interface, "\n渣男，你今天没老婆了！")
+            return await construct_message(session, interface, "\n坏死了……你今天没老婆了！")
         waifu_id: str = await self.select_step(user.id, session, interface)
         self.relation_step(user.id, waifu_id)
         # 最后一次换老婆的情况
@@ -254,14 +262,14 @@ class SceneRecord(BaseModel):
             return await construct_message(
                 session,
                 interface,
-                "\n渣男，再换你今天就没老婆了！\n你今天的群友老婆是我哦~" if waifu_id == session.self_id
-                else "\n渣男，再换你今天就没老婆了！\n你今天的群友老婆是：",
+                SPECIAL_TEXT_CHANGE_LAST if waifu_id == SPECIAL_WAIFU_ID
+                else "\n不要再换了……不要再换了……\n你今天的群友老婆是：",
                 waifu_id,
             )
         return await construct_message(
             session,
             interface,
-            "\n你今天的群友老婆是我哦~\n如果你这个渣男敢抛弃我的话，你今天就没老婆了哦" if waifu_id == session.self_id
+            SPECIAL_TEXT_CHANGE_NORMAL if waifu_id == SPECIAL_WAIFU_ID
             else "\n你今天的群友老婆是：",
             waifu_id,
         )
@@ -271,13 +279,13 @@ class SceneRecord(BaseModel):
         user = session.user
         # 换老婆超过次数限制
         if self.allow_change_waifu and self._check_change_waifu_list(user.id):
-            return await construct_message(session, interface, "\n渣男，你今天没老婆了！")
+            return await construct_message(session, interface, "\n坏死了……你今天没老婆了！")
         # 如果已经抽过老婆，则直接返回对应的老婆
         if user.id in self.waifu_record:
             return await construct_message(
                 session,
                 interface,
-                "\n你今天已经有老婆了，是我哦，不可以再有别人了呢~" if self.waifu_record[user.id] == session.self_id
+                SPECIAL_TEXT_ALREADY_HAS if self.waifu_record[user.id] == SPECIAL_WAIFU_ID
                 else "\n你今天已经有老婆了，要好好对待她哦~",
                 self.waifu_record[user.id],
             )
@@ -286,7 +294,7 @@ class SceneRecord(BaseModel):
         return await construct_message(
             session,
             interface,
-            "\n你今天的群友老婆是我哦~" if waifu_id == session.self_id else "\n你今天的群友老婆是：",
+            SPECIAL_TEXT_FIRST_DRAW if waifu_id == SPECIAL_WAIFU_ID else "\n你今天的群友老婆是：",
             waifu_id,
         )
 
